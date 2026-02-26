@@ -421,19 +421,31 @@ function TokenTreeGraph({ data, firstCompletion }) {
 
     // Mark all nodes on the most probable path for green coloring
     const mostProbableNodeIds = new Set();
+    let greenPathText = '';
+
     if (mostProbableLeaf) {
       let current = mostProbableLeaf;
       while (current) {
         mostProbableNodeIds.add(current.data.node_id);
         current = current.parent;
       }
+      // Reconstruct text from green path so it matches exactly
+      greenPathText = getCompletionPath(mostProbableLeaf);
     }
 
-    // Use firstCompletion from API (guaranteed grammatical) or fallback to tree path
-    if (firstCompletion) {
+    // Debug: Compare the two texts
+    if (firstCompletion && greenPathText) {
+      console.log('First completion from API:', firstCompletion);
+      console.log('Green path from tree:', greenPathText);
+      console.log('Match:', firstCompletion === greenPathText);
+    }
+
+    // Use the reconstructed green path text if available (matches highlighting)
+    // Otherwise use firstCompletion from API as fallback
+    if (greenPathText) {
+      setMostProbableCompletion(greenPathText);
+    } else if (firstCompletion) {
       setMostProbableCompletion(firstCompletion);
-    } else if (mostProbableLeaf) {
-      setMostProbableCompletion(getCompletionPath(mostProbableLeaf));
     }
 
     // Create node groups
