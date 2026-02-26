@@ -1,21 +1,15 @@
 {
-  "version": 2,
   "buildCommand": "cd frontend && npm install && npm run build",
   "outputDirectory": "frontend/dist",
-  "builds": [
-    {
-      "src": "backend/app.py",
-      "use": "@vercel/python"
+  "functions": {
+    "backend/app.py": {
+      "runtime": "python3.9"
     }
-  ],
-  "routes": [
+  },
+  "rewrites": [
     {
-      "src": "/api/(.*)",
-      "dest": "backend/app.py"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "frontend/dist/$1"
+      "source": "/api/(.*)",
+      "destination": "/backend/app.py"
     }
   ]
 }
