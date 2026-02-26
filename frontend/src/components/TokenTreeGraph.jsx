@@ -386,28 +386,48 @@ function TokenTreeGraph({ data, firstCompletion }) {
       return minCount;
     };
 
-    // Helper function to check if entire path to node is the tracked path
-    const isTrackedPath = (node) => {
-      let current = node;
-      while (current.parent) {
-        if (current.data.token !== '<ROOT>' && !current.data.is_tracked_path) {
-          return false;
-        }
-        current = current.parent;
-      }
-      return true;
-    };
-
     // Find leaf nodes that are at the end of selected paths only
     const leafNodes = nodes.filter(d =>
       (!d.children || d.children.length === 0) && isSelectedPath(d)
     );
 
-    // Find the tracked path to highlight in green
+    // Find the leaf that matches the firstCompletion text (if available)
+    // This ensures the green path matches the displayed text exactly
     let mostProbableLeaf = null;
-    mostProbableLeaf = leafNodes.find(leaf => isTrackedPath(leaf));
 
-    // Fallback: if no tracked path found, use highest gen_count method
+    if (firstCompletion) {
+      // Try to find exact match first
+      mostProbableLeaf = leafNodes.find(leaf => {
+        const pathText = getCompletionPath(leaf);
+        return pathText === firstCompletion;
+      });
+
+      // If no exact match, find the closest match (longest common prefix)
+      if (!mostProbableLeaf) {
+        let bestMatch = null;
+        let longestMatch = 0;
+
+        leafNodes.forEach(leaf => {
+          const pathText = getCompletionPath(leaf);
+          let matchLength = 0;
+          for (let i = 0; i < Math.min(pathText.length, firstCompletion.length); i++) {
+            if (pathText[i] === firstCompletion[i]) {
+              matchLength++;
+            } else {
+              break;
+            }
+          }
+          if (matchLength > longestMatch) {
+            longestMatch = matchLength;
+            bestMatch = leaf;
+          }
+        });
+
+        mostProbableLeaf = bestMatch;
+      }
+    }
+
+    // Fallback: if no firstCompletion or no match found, use highest gen_count method
     if (!mostProbableLeaf && leafNodes.length > 0) {
       let highestGenCount = -Infinity;
       leafNodes.forEach(leaf => {
@@ -421,31 +441,21 @@ function TokenTreeGraph({ data, firstCompletion }) {
 
     // Mark all nodes on the most probable path for green coloring
     const mostProbableNodeIds = new Set();
-    let greenPathText = '';
-
     if (mostProbableLeaf) {
       let current = mostProbableLeaf;
       while (current) {
         mostProbableNodeIds.add(current.data.node_id);
         current = current.parent;
       }
-      // Reconstruct text from green path so it matches exactly
-      greenPathText = getCompletionPath(mostProbableLeaf);
     }
 
-    // Debug: Compare the two texts
-    if (firstCompletion && greenPathText) {
-      console.log('First completion from API:', firstCompletion);
-      console.log('Green path from tree:', greenPathText);
-      console.log('Match:', firstCompletion === greenPathText);
-    }
-
-    // Use the reconstructed green path text if available (matches highlighting)
-    // Otherwise use firstCompletion from API as fallback
-    if (greenPathText) {
-      setMostProbableCompletion(greenPathText);
-    } else if (firstCompletion) {
+    // Always use firstCompletion from API if available (guaranteed grammatical)
+    // This ensures the floating tile shows the actual model completion
+    if (firstCompletion) {
       setMostProbableCompletion(firstCompletion);
+    } else if (mostProbableLeaf) {
+      // Fallback to tree path if no API completion available
+      setMostProbableCompletion(getCompletionPath(mostProbableLeaf));
     }
 
     // Create node groups
