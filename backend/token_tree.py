@@ -29,7 +29,8 @@ class TokenTree:
         self.token_bytes = token_bytes
         self.log_prob = log_prob
         self.children = {}  # Dict[token_id -> TokenTree]
-        self.gen_count = 1  # How many completions selected this token
+        # gen_count starts at 0 and only increments for selected tokens
+        self.gen_count = 1 if was_selected else 0
         self.was_selected = was_selected  # Track if token was on generation path
         self.is_tracked_path = is_tracked_path  # Track if this is THE path to follow
         self.node_id = TokenTree._get_next_id()
@@ -57,10 +58,9 @@ class TokenTree:
         """
         for tree in other_trees:
             if tree.token_id in self.children:
-                # Increment generation count for existing token
-                self.children[tree.token_id].gen_count += 1
-                # If this token was selected in any path, mark it
+                # Only increment generation count if this token was selected (not just an alternative)
                 if tree.was_selected:
+                    self.children[tree.token_id].gen_count += 1
                     self.children[tree.token_id].was_selected = True
                 # If this is part of the tracked path, mark it
                 if tree.is_tracked_path:
