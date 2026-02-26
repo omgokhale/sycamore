@@ -7,6 +7,7 @@ import './styles/App.css';
 
 function App() {
   const [treeData, setTreeData] = useState(null);
+  const [firstCompletion, setFirstCompletion] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -22,6 +23,7 @@ function App() {
         top_logprobs: 3
       });
       setTreeData(result.tree);
+      setFirstCompletion(result.first_completion);
     } catch (err) {
       setError(err.message || 'Failed to generate tree');
       console.error('Error generating tree:', err);
@@ -42,7 +44,7 @@ function App() {
       {/* Full screen visualization */}
       <div className="visualization-container">
         {treeData ? (
-          <TokenTreeGraph data={treeData} />
+          <TokenTreeGraph data={treeData} firstCompletion={firstCompletion} />
         ) : (
           <div className="empty-state">
             <AsciiAnimation />

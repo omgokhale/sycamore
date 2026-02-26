@@ -36,13 +36,16 @@ class TokenTreeBuilder:
             top_logprobs: Number of alternative tokens to track at each position
 
         Returns:
-            TokenTree: Root node containing merged tree
+            tuple: (TokenTree root node, first_completion_text string)
         """
         # Reset node counter for consistent IDs
         TokenTree.reset_counter()
 
         # Create root node with placeholder token
         root = TokenTree(token_id="<ROOT>", token_bytes="<ROOT>", log_prob=0.0)
+
+        # Store the first completion text for guaranteed grammatical output
+        first_completion_text = None
 
         # Modify prompt to encourage shorter responses
         modified_prompt = f"Answer very briefly in one short sentence (under 15 words): {prompt}"
@@ -62,6 +65,10 @@ class TokenTreeBuilder:
             # Process all completions
             for i, choice in enumerate(response.choices):
                 try:
+                    # Store the first completion text (guaranteed grammatical)
+                    if i == 0 and choice.message and choice.message.content:
+                        first_completion_text = choice.message.content
+
                     # Mark first completion as the tracked path
                     is_tracked = (i == 0)
                     tree_from_completion = self._process_completion(choice, is_tracked_path=is_tracked)
@@ -75,7 +82,7 @@ class TokenTreeBuilder:
             print(f"Error calling OpenAI API: {e}")
             raise
 
-        return root
+        return root, first_completion_text
 
     def _process_completion(self, choice, is_tracked_path=False):
         """

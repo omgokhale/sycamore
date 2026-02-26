@@ -55,7 +55,7 @@ class handler(BaseHTTPRequestHandler):
 
             # Build tree
             builder = TokenTreeBuilder(api_key)
-            root = builder.build_tree(prompt, num_runs, max_tokens, top_logprobs)
+            root, first_completion = builder.build_tree(prompt, num_runs, max_tokens, top_logprobs)
             tree_data = root.to_dict()
 
             # Send response
@@ -65,6 +65,7 @@ class handler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(json.dumps({
                 'tree': tree_data,
+                'first_completion': first_completion,  # Guaranteed grammatical completion
                 'status': 'success',
                 'params': {
                     'prompt': prompt,

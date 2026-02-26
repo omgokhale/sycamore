@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
 
-function TokenTreeGraph({ data }) {
+function TokenTreeGraph({ data, firstCompletion }) {
   const svgRef = useRef(null);
   const containerRef = useRef(null);
   const [dimensions, setDimensions] = useState({ width: 1600, height: 1000 });
@@ -403,14 +403,11 @@ function TokenTreeGraph({ data }) {
       (!d.children || d.children.length === 0) && isSelectedPath(d)
     );
 
-    // Find the tracked path (actual first completion that was generated)
-    // This guarantees grammatical correctness since it's a real completion
+    // Find the tracked path to highlight in green
     let mostProbableLeaf = null;
-
-    // First, try to find a leaf on the tracked path
     mostProbableLeaf = leafNodes.find(leaf => isTrackedPath(leaf));
 
-    // Fallback: if no tracked path found (shouldn't happen), use old method
+    // Fallback: if no tracked path found, use highest gen_count method
     if (!mostProbableLeaf && leafNodes.length > 0) {
       let highestGenCount = -Infinity;
       leafNodes.forEach(leaf => {
@@ -422,7 +419,7 @@ function TokenTreeGraph({ data }) {
       });
     }
 
-    // Mark all nodes on the most probable path
+    // Mark all nodes on the most probable path for green coloring
     const mostProbableNodeIds = new Set();
     if (mostProbableLeaf) {
       let current = mostProbableLeaf;
@@ -430,8 +427,12 @@ function TokenTreeGraph({ data }) {
         mostProbableNodeIds.add(current.data.node_id);
         current = current.parent;
       }
+    }
 
-      // Set the most probable completion text
+    // Use firstCompletion from API (guaranteed grammatical) or fallback to tree path
+    if (firstCompletion) {
+      setMostProbableCompletion(firstCompletion);
+    } else if (mostProbableLeaf) {
       setMostProbableCompletion(getCompletionPath(mostProbableLeaf));
     }
 
@@ -720,7 +721,7 @@ function TokenTreeGraph({ data }) {
       .delay((d, i) => links.length * 15 + 1100 + i * 40)
       .ease(d3.easeCubicOut)
       .attr('opacity', 0.5);
-  }, [data, dimensions]);
+  }, [data, dimensions, firstCompletion]);
 
   const handleZoomToFit = () => {
     if (svgRef.current && svgRef.current.zoomToFit) {
