@@ -386,22 +386,41 @@ function TokenTreeGraph({ data }) {
       return minCount;
     };
 
+    // Helper function to check if entire path to node is the tracked path
+    const isTrackedPath = (node) => {
+      let current = node;
+      while (current.parent) {
+        if (current.data.token !== '<ROOT>' && !current.data.is_tracked_path) {
+          return false;
+        }
+        current = current.parent;
+      }
+      return true;
+    };
+
     // Find leaf nodes that are at the end of selected paths only
     const leafNodes = nodes.filter(d =>
       (!d.children || d.children.length === 0) && isSelectedPath(d)
     );
 
-    // Find the most common path (highest minimum gen_count along path)
+    // Find the tracked path (actual first completion that was generated)
+    // This guarantees grammatical correctness since it's a real completion
     let mostProbableLeaf = null;
-    let highestGenCount = -Infinity;
 
-    leafNodes.forEach(leaf => {
-      const pathGenCount = getPathGenCount(leaf);
-      if (pathGenCount > highestGenCount) {
-        highestGenCount = pathGenCount;
-        mostProbableLeaf = leaf;
-      }
-    });
+    // First, try to find a leaf on the tracked path
+    mostProbableLeaf = leafNodes.find(leaf => isTrackedPath(leaf));
+
+    // Fallback: if no tracked path found (shouldn't happen), use old method
+    if (!mostProbableLeaf && leafNodes.length > 0) {
+      let highestGenCount = -Infinity;
+      leafNodes.forEach(leaf => {
+        const pathGenCount = getPathGenCount(leaf);
+        if (pathGenCount > highestGenCount) {
+          highestGenCount = pathGenCount;
+          mostProbableLeaf = leaf;
+        }
+      });
+    }
 
     // Mark all nodes on the most probable path
     const mostProbableNodeIds = new Set();
