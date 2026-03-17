@@ -4,10 +4,14 @@ import * as d3 from 'd3';
 function TokenTreeGraph({ data, firstCompletion }) {
   const svgRef = useRef(null);
   const containerRef = useRef(null);
+  const zoomRef = useRef(null);
   const [dimensions, setDimensions] = useState({ width: 1600, height: 1000 });
   const [mostProbableCompletion, setMostProbableCompletion] = useState(null);
   const [displayText, setDisplayText] = useState('');
   const [isAnimating, setIsAnimating] = useState(false);
+  const [selectedNodePath, setSelectedNodePath] = useState(null);
+  const [currentPathIndex, setCurrentPathIndex] = useState(0);
+  const [showNavButtons, setShowNavButtons] = useState(false);
 
   // Update dimensions on window resize
   useEffect(() => {
@@ -154,8 +158,51 @@ function TokenTreeGraph({ data, firstCompletion }) {
       });
     svg.call(zoom);
 
+    // Store zoom instance for use in navigation handlers
+    zoomRef.current = zoom;
+
+    // Click on background to hide navigation buttons
+    svg.on('click', function(event) {
+      // Only hide if clicking directly on SVG background (not on nodes)
+      if (event.target === this) {
+        setShowNavButtons(false);
+      }
+    });
+
+    // Helper function to find path from root through a node to its leaf
+    const findPathToLeaf = (targetNode) => {
+      const path = [];
+
+      // First, traverse up to root
+      let current = targetNode;
+      const pathToNode = [];
+      while (current) {
+        pathToNode.unshift(current); // Add to beginning
+        current = current.parent;
+      }
+
+      // Now traverse down from targetNode to leaf, following selected children
+      current = targetNode;
+      const pathToLeaf = [current];
+
+      while (current.children && current.children.length > 0) {
+        // Find the selected child (was_selected = true)
+        const selectedChild = current.children.find(child => child.data.was_selected);
+        if (selectedChild) {
+          pathToLeaf.push(selectedChild);
+          current = selectedChild;
+        } else {
+          // No selected child, we're at a leaf
+          break;
+        }
+      }
+
+      // Combine: path from root to node (excluding node itself) + path from node to leaf
+      return [...pathToNode.slice(0, -1), ...pathToLeaf];
+    };
+
     // Helper function to zoom to a specific node
-    const zoomToNode = (nodeData, nodeDatum) => {
+    const zoomToNode = (nodeData, nodeDatum, updateNavState = true) => {
       const scale = 1.5; // Zoom level
       const x = -nodeDatum.y * scale + dimensions.width / 2;
       const y = -nodeDatum.x * scale + dimensions.height / 2;
@@ -166,10 +213,22 @@ function TokenTreeGraph({ data, firstCompletion }) {
           zoom.transform,
           d3.zoomIdentity.translate(x, y).scale(scale)
         );
+
+      // Update navigation state if this is from a user click
+      if (updateNavState && nodeDatum.data.was_selected) {
+        const path = findPathToLeaf(nodeDatum);
+        const index = path.findIndex(n => n === nodeDatum);
+        setSelectedNodePath(path);
+        setCurrentPathIndex(index);
+        setShowNavButtons(true);
+      } else if (updateNavState && !nodeDatum.data.was_selected) {
+        // White tile - hide nav buttons
+        setShowNavButtons(false);
+      }
     };
 
     // Helper function to zoom to fit entire graph
-    const zoomToFit = () => {
+    const zoomToFit = (animate = true) => {
       // Calculate bounds of all nodes including completion nodes
       let minX = Infinity, maxX = -Infinity;
       let minY = Infinity, maxY = -Infinity;
@@ -204,12 +263,20 @@ function TokenTreeGraph({ data, firstCompletion }) {
       const x = -centerY * scale + dimensions.width / 2;
       const y = -centerX * scale + dimensions.height / 2;
 
-      svg.transition()
-        .duration(750)
-        .call(
+      if (animate) {
+        svg.transition()
+          .duration(750)
+          .call(
+            zoom.transform,
+            d3.zoomIdentity.translate(x, y).scale(scale)
+          );
+      } else {
+        // Set zoom instantly without animation
+        svg.call(
           zoom.transform,
           d3.zoomIdentity.translate(x, y).scale(scale)
         );
+      }
     };
 
     // Store zoomToFit in a ref so it can be called from the button
@@ -704,12 +771,57 @@ function TokenTreeGraph({ data, firstCompletion }) {
       .delay((d, i) => links.length * 15 + 1100 + i * 40)
       .ease(d3.easeCubicOut)
       .attr('opacity', 0.5);
+
+    // Set initial zoom to show full tree
+    zoomToFit(false);
   }, [data, dimensions, firstCompletion]);
 
   const handleZoomToFit = () => {
     if (svgRef.current && svgRef.current.zoomToFit) {
       svgRef.current.zoomToFit();
     }
+  };
+
+  const handleNavigateBack = () => {
+    if (!selectedNodePath || currentPathIndex <= 0 || !zoomRef.current) return;
+
+    const newIndex = currentPathIndex - 1;
+    const targetNode = selectedNodePath[newIndex];
+
+    const svg = d3.select(svgRef.current);
+    const scale = 1.5;
+    const x = -targetNode.y * scale + dimensions.width / 2;
+    const y = -targetNode.x * scale + dimensions.height / 2;
+
+    svg.transition()
+      .duration(750)
+      .call(
+        zoomRef.current.transform,
+        d3.zoomIdentity.translate(x, y).scale(scale)
+      );
+
+    setCurrentPathIndex(newIndex);
+  };
+
+  const handleNavigateNext = () => {
+    if (!selectedNodePath || currentPathIndex >= selectedNodePath.length - 1 || !zoomRef.current) return;
+
+    const newIndex = currentPathIndex + 1;
+    const targetNode = selectedNodePath[newIndex];
+
+    const svg = d3.select(svgRef.current);
+    const scale = 1.5;
+    const x = -targetNode.y * scale + dimensions.width / 2;
+    const y = -targetNode.x * scale + dimensions.height / 2;
+
+    svg.transition()
+      .duration(750)
+      .call(
+        zoomRef.current.transform,
+        d3.zoomIdentity.translate(x, y).scale(scale)
+      );
+
+    setCurrentPathIndex(newIndex);
   };
 
   return (
@@ -721,6 +833,33 @@ function TokenTreeGraph({ data, firstCompletion }) {
           <div className="most-probable-icon"></div>
           <div className="most-probable-text">{displayText || mostProbableCompletion}</div>
         </div>
+      )}
+
+      {showNavButtons && (
+        <>
+          <button
+            className={`nav-button nav-back-button ${currentPathIndex === 0 ? 'disabled' : ''}`}
+            onClick={handleNavigateBack}
+            disabled={currentPathIndex === 0}
+            style={{
+              opacity: showNavButtons ? 1 : 0,
+              transition: 'opacity 300ms ease-in-out'
+            }}
+          >
+            <img src="/caret-back.svg" alt="Previous" />
+          </button>
+          <button
+            className={`nav-button nav-next-button ${currentPathIndex >= selectedNodePath?.length - 1 ? 'disabled' : ''}`}
+            onClick={handleNavigateNext}
+            disabled={currentPathIndex >= selectedNodePath?.length - 1}
+            style={{
+              opacity: showNavButtons ? 1 : 0,
+              transition: 'opacity 300ms ease-in-out'
+            }}
+          >
+            <img src="/caret-next.svg" alt="Next" />
+          </button>
+        </>
       )}
 
       <button className="zoom-to-fit-button" onClick={handleZoomToFit}>
