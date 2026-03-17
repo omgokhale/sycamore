@@ -104,25 +104,50 @@ class TokenTreeBuilder:
             return None
 
         # Start with first token
-        first_token_logprobs = logprobs_data[0].top_logprobs
+        first_position_data = logprobs_data[0]
+        first_token_logprobs = first_position_data.top_logprobs
         if not first_token_logprobs:
             return None
 
-        # Create node for the selected token (first in top_logprobs)
-        current_node = self._create_node_from_logprob(
-            first_token_logprobs[0],
-            was_selected=True,
-            is_tracked_path=is_tracked_path
-        )
-        root_node = current_node
+        # Find the actual selected token from the API (not just index 0)
+        actual_first_token = first_position_data.token
+
+        # Create nodes for all alternatives at first position
+        root_node = None
+        for logprob_obj in first_token_logprobs:
+            is_selected = (logprob_obj.token == actual_first_token)
+            is_on_tracked_path = is_tracked_path and is_selected
+            node = self._create_node_from_logprob(
+                logprob_obj,
+                was_selected=is_selected,
+                is_tracked_path=is_on_tracked_path
+            )
+            # The selected token becomes the root
+            if is_selected:
+                root_node = node
+
+        if not root_node:
+            # Fallback: use first if we can't find the actual token
+            root_node = self._create_node_from_logprob(
+                first_token_logprobs[0],
+                was_selected=True,
+                is_tracked_path=is_tracked_path
+            )
+
+        current_node = root_node
 
         # Process each subsequent token position
         for position_data in logprobs_data[1:]:
+            # Get the actual selected token at this position
+            actual_token = position_data.token
+
             # Collect all alternative tokens at this position
             alternative_trees = []
-            for i, logprob_obj in enumerate(position_data.top_logprobs):
-                # First token (index 0) is the actually selected token
-                is_selected = (i == 0)
+            selected_node = None
+
+            for logprob_obj in position_data.top_logprobs:
+                # Check if this is the actually selected token
+                is_selected = (logprob_obj.token == actual_token)
                 # Only mark as tracked path if this is the selected token AND we're on the tracked completion
                 is_on_tracked_path = is_tracked_path and is_selected
                 child_node = self._create_node_from_logprob(
@@ -132,17 +157,25 @@ class TokenTreeBuilder:
                 )
                 alternative_trees.append(child_node)
 
+                # Track which node is the selected one
+                if is_selected:
+                    selected_node = child_node
+
             if not alternative_trees:
                 break
 
-            # The first alternative is the selected token
-            selected = alternative_trees[0]
+            # Fallback: if we didn't find the actual token, use first
+            if not selected_node:
+                selected_node = alternative_trees[0]
+                selected_node.was_selected = True
+                if is_tracked_path:
+                    selected_node.is_tracked_path = True
 
             # Merge all alternatives (including selected) as children
             current_node.merge_children(alternative_trees)
 
             # Move to selected token for next iteration
-            current_node = current_node.children[selected.token_id]
+            current_node = current_node.children[selected_node.token_id]
 
         return root_node
 
