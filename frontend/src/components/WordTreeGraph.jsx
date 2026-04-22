@@ -13,6 +13,7 @@ function WordTreeGraph({ data, firstCompletion }) {
   const [currentPathIndex, setCurrentPathIndex] = useState(0);
   const [showNavButtons, setShowNavButtons] = useState(false);
   const [focusedNodeId, setFocusedNodeId] = useState(null);
+  const [tooltip, setTooltip] = useState({ visible: false, x: 0, y: 0, data: null });
 
   // Update dimensions on window resize
   useEffect(() => {
@@ -159,6 +160,19 @@ function WordTreeGraph({ data, firstCompletion }) {
       }
     });
 
+    // Helper function to build completion text from root to node
+    const getCompletionText = (node) => {
+      const tokens = [];
+      let current = node;
+      while (current.parent) {
+        if (current.data.token !== '<ROOT>') {
+          tokens.unshift(current.data.token);
+        }
+        current = current.parent;
+      }
+      return tokens.join('');
+    };
+
     // Find tracked path nodes
     const trackedPathNodeIds = new Set();
     let mostProbableLeaf = null;
@@ -197,10 +211,10 @@ function WordTreeGraph({ data, firstCompletion }) {
       return minFontSize + normalized * (maxFontSize - minFontSize);
     };
 
-    // Color: black for selected, gray for alternatives, green for tracked path only
+    // Color: black for selected, gray for alternatives, blue for tracked path only
     const getTextColor = (nodeData) => {
       if (nodeData.token === '<ROOT>') return '#000000';
-      if (trackedPathNodeIds.has(nodeData.node_id)) return '#7FD895'; // Green for tracked path
+      if (trackedPathNodeIds.has(nodeData.node_id)) return '#0080FF'; // Blue for tracked path
       if (nodeData.gen_count === 0) return '#999999'; // Gray for never selected
       return '#000000'; // Black for selected
     };
@@ -409,6 +423,39 @@ function WordTreeGraph({ data, firstCompletion }) {
         event.stopPropagation();
         // Wattenberg-style focus: show only this node, its ancestors, and descendants
         setFocusedNodeId(d.data.node_id);
+      })
+      .on('mouseenter', function(event, d) {
+        if (d.data.token === '<ROOT>') return; // No tooltip for root
+
+        // Change text color to hover color
+        d3.select(this).select('.token-text').attr('fill', '#6EB7FF');
+
+        // Get the bounding box of this node group in screen coordinates
+        const bbox = this.getBoundingClientRect();
+
+        // Calculate probability
+        const probValue = Math.exp(d.data.log_prob) * 100;
+        const probDisplay = (probValue > 0 && probValue < 0.1) ? '<0.1' : probValue.toFixed(1);
+
+        // Position tooltip below the node
+        setTooltip({
+          visible: true,
+          x: bbox.left,
+          y: bbox.bottom + 5, // 5px below
+          data: {
+            token: d.data.token,
+            status: trackedPathNodeIds.has(d.data.node_id) ? 'Selected' :
+                    (d.data.gen_count > 0 ? 'Alternative' : 'Considered'),
+            probability: probDisplay,
+            genCount: d.data.gen_count
+          }
+        });
+      })
+      .on('mouseleave', function(event, d) {
+        // Restore original text color
+        d3.select(this).select('.token-text').attr('fill', getTextColor(d.data));
+
+        setTooltip({ visible: false, x: 0, y: 0, data: null });
       });
 
     // Apply visibility based on focused node (Wattenberg-style focus)
@@ -440,7 +487,7 @@ function WordTreeGraph({ data, firstCompletion }) {
       .attr('opacity', d => getNodeOpacity(d));
 
     // Add text labels with Wattenberg styling
-    node.append('text')
+    const textLabels = node.append('text')
       .attr('class', 'token-text')
       .text(d => {
         if (d.data.token === '<ROOT>') return 'START';
@@ -462,6 +509,73 @@ function WordTreeGraph({ data, firstCompletion }) {
       .delay((d, i) => focusedNode ? 0 : i * 15 + 300)
       .ease(d3.easeCubicOut)
       .attr('opacity', d => getNodeOpacity(d));
+
+    // Add completion text boxes for leaf nodes
+    const leafNodes = nodes.filter(d =>
+      (!d.children || d.children.length === 0) && // Is a leaf
+      d.data.gen_count > 0 && // Was actually selected at least once
+      d.data.token !== '<ROOT>' // Not the root
+    );
+
+    leafNodes.forEach((leafNode, leafIndex) => {
+      const completionText = getCompletionText(leafNode);
+      const nodeGroup = node.filter(d => d.data.node_id === leafNode.data.node_id);
+
+      // Add white background box
+      const boxPadding = 6;
+      const boxWidth = 200;
+      const lineHeight = 12;
+      const fontSize = 9;
+
+      // Calculate height based on actual content
+      // Estimate characters per line (monospace: ~0.6em per char)
+      const charsPerLine = Math.floor((boxWidth - boxPadding * 2) / (fontSize * 0.6));
+      const numLines = Math.ceil(completionText.length / charsPerLine);
+      const boxHeight = numLines * lineHeight + boxPadding * 2;
+
+      nodeGroup.append('rect')
+        .attr('class', 'completion-box-bg')
+        .attr('x', leafNode.textWidth + 20)
+        .attr('y', -boxPadding)
+        .attr('width', boxWidth)
+        .attr('height', boxHeight)
+        .attr('fill', '#FFFFFF')
+        .attr('stroke', '#D0D0D0')
+        .attr('stroke-width', 1)
+        .attr('opacity', 0)
+        .style('pointer-events', 'none')
+        .transition()
+        .duration(400)
+        .delay(focusedNode ? 0 : nodes.length * 15 + 400 + leafIndex * 50) // After all nodes finish
+        .ease(d3.easeCubicOut)
+        .attr('opacity', 1); // Full opacity
+
+      // Add text with wrapping using foreignObject
+      const foreignObj = nodeGroup.append('foreignObject')
+        .attr('class', 'completion-box-text')
+        .attr('x', leafNode.textWidth + 20 + boxPadding)
+        .attr('y', 0)
+        .attr('width', boxWidth - boxPadding * 2)
+        .attr('height', boxHeight - boxPadding * 2)
+        .style('pointer-events', 'none')
+        .attr('opacity', 0);
+
+      foreignObj.append('xhtml:div')
+        .style('font-family', '"IBM Plex Mono", monospace')
+        .style('font-size', `${fontSize}px`)
+        .style('line-height', `${lineHeight}px`)
+        .style('color', '#666666')
+        .style('word-wrap', 'break-word')
+        .style('overflow-wrap', 'break-word')
+        .style('white-space', 'normal')
+        .text(completionText);
+
+      foreignObj.transition()
+        .duration(400)
+        .delay(focusedNode ? 0 : nodes.length * 15 + 400 + leafIndex * 50) // After all nodes finish
+        .ease(d3.easeCubicOut)
+        .attr('opacity', 1); // Full opacity
+    });
 
     // Set zoom based on focus state
     if (focusedNode) {
@@ -561,6 +675,29 @@ function WordTreeGraph({ data, firstCompletion }) {
         <div>OM GOKHALE</div>
         <div>LAST UPDATED 2.26.26</div>
       </div>
+
+      {/* Floating tooltip */}
+      {tooltip.visible && tooltip.data && (
+        <div
+          style={{
+            position: 'fixed',
+            left: `${tooltip.x}px`,
+            top: `${tooltip.y}px`,
+            backgroundColor: '#FFFFFF',
+            border: '1px solid #CCCCCC',
+            padding: '8px 10px',
+            borderRadius: '4px',
+            fontFamily: '"IBM Plex Mono", monospace',
+            fontSize: '10px',
+            pointerEvents: 'none',
+            zIndex: 1000
+          }}
+        >
+          <div style={{ color: '#000000', marginBottom: '4px' }}>{tooltip.data.status}</div>
+          <div style={{ color: '#666666', marginBottom: '2px' }}>{tooltip.data.probability}% probability</div>
+          <div style={{ color: '#666666' }}>Selected {tooltip.data.genCount}/30 times</div>
+        </div>
+      )}
     </div>
   );
 }

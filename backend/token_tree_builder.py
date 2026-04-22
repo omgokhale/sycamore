@@ -46,6 +46,7 @@ class TokenTreeBuilder:
 
         # Store the first completion text for guaranteed grammatical output
         first_completion_text = None
+        first_completion_tokens = []
 
         # Modify prompt to encourage shorter responses
         modified_prompt = f"Answer very briefly in one short sentence (under 15 words): {prompt}"
@@ -65,9 +66,10 @@ class TokenTreeBuilder:
             # Process all completions
             for i, choice in enumerate(response.choices):
                 try:
-                    # Store the first completion text (guaranteed grammatical)
-                    if i == 0 and choice.message and choice.message.content:
-                        first_completion_text = choice.message.content
+                    # Store the first completion tokens (from logprobs, not message.content)
+                    if i == 0 and choice.logprobs and choice.logprobs.content:
+                        first_completion_tokens = [pos.token for pos in choice.logprobs.content]
+                        first_completion_text = ''.join(first_completion_tokens)
 
                     # Mark first completion as the tracked path
                     is_tracked = (i == 0)
