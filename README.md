@@ -1,15 +1,16 @@
 # Hecate - Token Tree Visualization
 
-Visualize LLM token generation trees with D3 force-directed graphs. Watch as language models explore different token possibilities, with gentle animations showing the "blossoming" of the probability tree.
+Visualize LLM token generation trees with Wattenberg-style word trees. Explore how language models consider different token possibilities, with interactive focus and zoom to reveal patterns and biases.
 
 ## Features
 
-- Interactive D3 force-directed graph visualization
-- Animated node and edge rendering with blur and line-drawing effects
-- Token probability display (logprobs converted to percentages)
-- Generation count visualization (shows how often each token was selected)
-- Draggable nodes and zoom functionality
-- Real-time tree generation using OpenAI's GPT models
+- **Wattenberg-style word tree** - Left-to-right layout with font size = frequency
+- **Click to focus** - Hide siblings, zoom to selected branch
+- **Hover metadata** - Status, probability, selection count
+- **Bias detection** - See what models consider but never choose
+- **Auto-zoom framing** - Smooth transitions and optimal text sizing
+- **Three token states**: Selected (green), Alternative (black), Considered (gray)
+- Real-time tree generation using OpenAI's GPT-4o-mini
 
 ## Architecture
 

@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import InputForm from './components/InputForm';
-import TokenTreeGraph from './components/TokenTreeGraph';
+import WordTreeGraph from './components/WordTreeGraph';
 import AsciiAnimation from './components/AsciiAnimation';
 import { generateTree } from './services/api';
 import './styles/App.css';
@@ -32,6 +32,11 @@ function App() {
     }
   };
 
+  // Auto-generate tree for "Hello, world." on startup
+  useEffect(() => {
+    handleSubmit('Hello, world.');
+  }, []); // Empty dependency array = runs once on mount
+
   return (
     <div className="app-fullscreen">
       {/* Floating input at top center */}
@@ -44,7 +49,7 @@ function App() {
       {/* Full screen visualization */}
       <div className="visualization-container">
         {treeData ? (
-          <TokenTreeGraph data={treeData} firstCompletion={firstCompletion} />
+          <WordTreeGraph data={treeData} firstCompletion={firstCompletion} />
         ) : (
           <div className="empty-state">
             <AsciiAnimation />
