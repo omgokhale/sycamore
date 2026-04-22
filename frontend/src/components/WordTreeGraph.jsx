@@ -14,6 +14,7 @@ function WordTreeGraph({ data, firstCompletion }) {
   const [showNavButtons, setShowNavButtons] = useState(false);
   const [focusedNodeId, setFocusedNodeId] = useState(null);
   const [tooltip, setTooltip] = useState({ visible: false, x: 0, y: 0, data: null });
+  const [isCompletionBoxClick, setIsCompletionBoxClick] = useState(false); // Track if click was from completion box
 
   // Update dimensions on window resize
   useEffect(() => {
@@ -242,6 +243,7 @@ function WordTreeGraph({ data, firstCompletion }) {
       if (event.target === this) {
         setShowNavButtons(false);
         setFocusedNodeId(null);
+        setIsCompletionBoxClick(false);
       }
     });
 
@@ -421,7 +423,8 @@ function WordTreeGraph({ data, firstCompletion }) {
       .style('cursor', 'pointer')
       .on('click', function(event, d) {
         event.stopPropagation();
-        // Wattenberg-style focus: show only this node, its ancestors, and descendants
+        // Token click: zoom to fit whole sequence
+        setIsCompletionBoxClick(false);
         setFocusedNodeId(d.data.node_id);
       })
       .on('mouseenter', function(event, d) {
@@ -533,7 +536,7 @@ function WordTreeGraph({ data, firstCompletion }) {
       const numLines = Math.ceil(completionText.length / charsPerLine);
       const boxHeight = numLines * lineHeight + boxPadding * 2;
 
-      nodeGroup.append('rect')
+      const completionBoxBg = nodeGroup.append('rect')
         .attr('class', 'completion-box-bg')
         .attr('x', leafNode.textWidth + 20)
         .attr('y', -boxPadding)
@@ -543,12 +546,19 @@ function WordTreeGraph({ data, firstCompletion }) {
         .attr('stroke', '#D0D0D0')
         .attr('stroke-width', 1)
         .attr('opacity', 0)
-        .style('pointer-events', 'none')
+        .style('cursor', 'pointer')
+        .on('click', function(event) {
+          event.stopPropagation();
+
+          // Completion box click: zoom to just this node
+          setIsCompletionBoxClick(true);
+          setFocusedNodeId(leafNode.data.node_id);
+        })
         .transition()
         .duration(400)
         .delay(focusedNode ? 0 : nodes.length * 15 + 400 + leafIndex * 50) // After all nodes finish
         .ease(d3.easeCubicOut)
-        .attr('opacity', 1); // Full opacity
+        .attr('opacity', isNodeVisible(leafNode, focusedNode) ? 1 : 0); // Respect visibility
 
       // Add text with wrapping using foreignObject
       const foreignObj = nodeGroup.append('foreignObject')
@@ -564,7 +574,7 @@ function WordTreeGraph({ data, firstCompletion }) {
         .style('font-family', '"IBM Plex Mono", monospace')
         .style('font-size', `${fontSize}px`)
         .style('line-height', `${lineHeight}px`)
-        .style('color', '#666666')
+        .style('color', '#000000')
         .style('word-wrap', 'break-word')
         .style('overflow-wrap', 'break-word')
         .style('white-space', 'normal')
@@ -574,18 +584,30 @@ function WordTreeGraph({ data, firstCompletion }) {
         .duration(400)
         .delay(focusedNode ? 0 : nodes.length * 15 + 400 + leafIndex * 50) // After all nodes finish
         .ease(d3.easeCubicOut)
-        .attr('opacity', 1); // Full opacity
+        .attr('opacity', isNodeVisible(leafNode, focusedNode) ? 1 : 0); // Respect visibility
     });
 
     // Set zoom based on focus state
     if (focusedNode) {
-      // When focused: zoom to visible nodes with animation
-      zoomToFit(true, true);
+      if (isCompletionBoxClick) {
+        // Completion box click: zoom to center on JUST that node with comfortable padding
+        const scale = 1.2;
+        const x = -focusedNode.y * scale + dimensions.width / 2;
+        const y = -focusedNode.x * scale + dimensions.height / 2;
+
+        svg.transition()
+          .duration(750)
+          .ease(d3.easeCubicInOut)
+          .call(zoom.transform, d3.zoomIdentity.translate(x, y).scale(scale));
+      } else {
+        // Token click: zoom to fit whole sequence
+        zoomToFit(true, true);
+      }
     } else {
       // Initial load or unfocus: show full tree without animation
       zoomToFit(false, false);
     }
-  }, [data, dimensions, firstCompletion, focusedNodeId]);
+  }, [data, dimensions, firstCompletion, focusedNodeId, isCompletionBoxClick]);
 
   const handleZoomToFit = () => {
     if (svgRef.current && svgRef.current.zoomToFit) {
