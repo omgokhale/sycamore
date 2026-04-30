@@ -146,6 +146,19 @@ function TokenTreeGraph({ data, firstCompletion }) {
       .attr('fill', '#E9E9E9')
       .style('opacity', 1.0);
 
+    defs.append('marker')
+      .attr('id', 'arrowhead-blue')
+      .attr('viewBox', '-0 -5 10 10')
+      .attr('refX', 10)
+      .attr('refY', 0)
+      .attr('orient', 'auto')
+      .attr('markerWidth', 8)
+      .attr('markerHeight', 8)
+      .append('svg:path')
+      .attr('d', 'M 0,-5 L 10 ,0 L 0,5')
+      .attr('fill', '#00831C')
+      .style('opacity', 1.0);
+
     // Create container for zoom and pan
     const g = svg.append('g')
       .attr('transform', `translate(50, ${dimensions.height / 2})`);
@@ -373,10 +386,10 @@ function TokenTreeGraph({ data, firstCompletion }) {
       .attr('class', 'link')
       .attr('d', linkGenerator)
       .attr('fill', 'none')
-      .attr('stroke', '#E9E9E9')
+      .attr('stroke', d => d.source.data.is_tracked_path && d.target.data.is_tracked_path ? '#00831C' : '#E9E9E9')
       .attr('stroke-opacity', 1.0)
       .attr('stroke-width', 1.5)
-      .attr('marker-end', 'url(#arrowhead)');
+      .attr('marker-end', d => d.source.data.is_tracked_path && d.target.data.is_tracked_path ? 'url(#arrowhead-blue)' : 'url(#arrowhead)');
 
     // Animate edges drawing themselves
     linkPaths.each(function(d, i) {
@@ -550,8 +563,9 @@ function TokenTreeGraph({ data, firstCompletion }) {
         return -d.rectHeight / 2 + padding.y + 12;
       })
       .attr('text-anchor', d => d.data.token === '<ROOT>' ? 'middle' : 'start')
-      .attr('font-family', '"IBM Plex Mono", monospace')
-      .attr('font-size', d => d.data.token === '<ROOT>' ? 11 : 14)
+      .attr('font-family', '"Libre Baskerville", serif')
+      .style('font-style', 'normal')
+      .attr('font-size', d => d.data.token === '<ROOT>' ? 12 : 16)
       .attr('font-weight', '400')
       .attr('fill', '#000000')
       .attr('opacity', 0)
@@ -574,7 +588,8 @@ function TokenTreeGraph({ data, firstCompletion }) {
       .attr('x', d => -d.rectWidth / 2 + padding.x)
       .attr('y', d => -d.rectHeight / 2 + padding.y + lineHeight + padding.y + 8)
       .attr('text-anchor', 'start')
-      .attr('font-family', '"IBM Plex Mono", monospace')
+      .attr('font-family', '"Libre Baskerville", serif')
+      .style('font-style', 'normal')
       .attr('font-size', 10)
       .attr('font-weight', '400')
       .attr('fill', '#000000')
@@ -611,28 +626,47 @@ function TokenTreeGraph({ data, firstCompletion }) {
       return lines;
     };
 
-    // Calculate dimensions for completion nodes
+    // Calculate dimensions for completion nodes using actual text measurement
+    const completionMeasurer = g.append('g').attr('visibility', 'hidden');
+
     leafNodes.forEach(d => {
-      // For the green path (mostProbableLeaf), use firstCompletion from API
-      // For other paths, reconstruct from tokens
       const isGreenPath = mostProbableLeaf && d.data.node_id === mostProbableLeaf.data.node_id;
       const completionText = isGreenPath && firstCompletion ? firstCompletion : getCompletionPath(d);
       const wrappedLines = wrapText(completionText, 4);
       d.wrappedLines = wrappedLines;
 
-      // Find the longest line for width calculation
-      const maxLineLength = Math.max(...wrappedLines.map(line => line.length));
-      const textWidth = maxLineLength * 9; // Monospace estimation
+      // Measure actual rendered width of each wrapped line
+      const lineWidths = wrappedLines.map(line => {
+        const tmp = completionMeasurer.append('text')
+          .attr('font-family', '"Libre Baskerville", serif')
+          .attr('font-size', '14px')
+          .attr('font-weight', '400')
+          .text(line);
+        const w = tmp.node().getComputedTextLength();
+        tmp.remove();
+        return w;
+      });
+      const textWidth = Math.max(...lineWidths);
+
       const countText = `${getPathGenCount(d)}/30`;
-      const countWidth = countText.length * 7;
+      const countTmp = completionMeasurer.append('text')
+        .attr('font-family', '"IBM Plex Mono", monospace')
+        .attr('font-size', '10px')
+        .attr('font-weight', '400')
+        .text(countText);
+      const countWidth = countTmp.node().getComputedTextLength();
+      countTmp.remove();
+
       d.completionWidth = Math.max(textWidth, countWidth, iconSize) + completionPadding.x * 2;
 
       // Height: top padding + icon + padding + text lines + padding + count line + bottom padding
       const textLinesHeight = wrappedLines.length * lineHeight;
       d.completionHeight = completionTopPadding + iconSize + completionPadding.y * 3 + textLinesHeight + lineHeight;
-      d.completionX = d.y + completionSpacing; // Position to the right of leaf node
+      d.completionX = d.y + completionSpacing;
       d.completionY = d.x;
     });
+
+    completionMeasurer.remove();
 
     // Create edges from leaf nodes to completion nodes with drawing animation
     const completionLinks = g.append('g')
@@ -725,7 +759,7 @@ function TokenTreeGraph({ data, firstCompletion }) {
         .attr('x', -d.completionWidth / 2 + completionPadding.x)
         .attr('y', -d.completionHeight / 2 + completionTopPadding + iconSize + completionPadding.y + 12)
         .attr('text-anchor', 'start')
-        .attr('font-family', '"IBM Plex Mono", monospace')
+        .attr('font-family', '"Libre Baskerville", serif')
         .attr('font-size', 14)
         .attr('font-weight', '400')
         .attr('fill', '#000000')
@@ -759,7 +793,7 @@ function TokenTreeGraph({ data, firstCompletion }) {
         return -d.completionHeight / 2 + completionTopPadding + iconSize + completionPadding.y + textLinesHeight + completionPadding.y + 8;
       })
       .attr('text-anchor', 'start')
-      .attr('font-family', '"IBM Plex Mono", monospace')
+      .attr('font-family', '"Libre Baskerville", serif')
       .attr('font-size', 10)
       .attr('font-weight', '400')
       .attr('fill', '#000000')
@@ -868,7 +902,7 @@ function TokenTreeGraph({ data, firstCompletion }) {
 
       <div className="credit-text">
         <div>OM GOKHALE</div>
-        <div>LAST UPDATED 2.26.26</div>
+        <div>LAST UPDATED {__COMMIT_DATE__}</div>
       </div>
     </div>
   );

@@ -3,87 +3,101 @@
   box-sizing: border-box;
 }
 
-/* IBM Plex Mono Font Classes */
-.ibm-plex-mono-thin {
-  font-family: "IBM Plex Mono", monospace;
-  font-weight: 100;
-  font-style: normal;
-}
-
-.ibm-plex-mono-extralight {
-  font-family: "IBM Plex Mono", monospace;
-  font-weight: 200;
-  font-style: normal;
-}
-
-.ibm-plex-mono-light {
-  font-family: "IBM Plex Mono", monospace;
+/* Libre Baskerville Font Classes */
+.libre-baskerville-thin {
+  font-family: "Libre Baskerville", serif;
+  font-optical-sizing: auto;
   font-weight: 300;
   font-style: normal;
 }
 
-.ibm-plex-mono-regular {
-  font-family: "IBM Plex Mono", monospace;
+.libre-baskerville-extralight {
+  font-family: "Libre Baskerville", serif;
+  font-optical-sizing: auto;
+  font-weight: 300;
+  font-style: normal;
+}
+
+.libre-baskerville-light {
+  font-family: "Libre Baskerville", serif;
+  font-optical-sizing: auto;
+  font-weight: 300;
+  font-style: normal;
+}
+
+.libre-baskerville-regular {
+  font-family: "Libre Baskerville", serif;
+  font-optical-sizing: auto;
   font-weight: 400;
   font-style: normal;
 }
 
-.ibm-plex-mono-medium {
-  font-family: "IBM Plex Mono", monospace;
+.libre-baskerville-medium {
+  font-family: "Libre Baskerville", serif;
+  font-optical-sizing: auto;
   font-weight: 500;
   font-style: normal;
 }
 
-.ibm-plex-mono-semibold {
-  font-family: "IBM Plex Mono", monospace;
+.libre-baskerville-semibold {
+  font-family: "Libre Baskerville", serif;
+  font-optical-sizing: auto;
   font-weight: 600;
   font-style: normal;
 }
 
-.ibm-plex-mono-bold {
-  font-family: "IBM Plex Mono", monospace;
+.libre-baskerville-bold {
+  font-family: "Libre Baskerville", serif;
+  font-optical-sizing: auto;
   font-weight: 700;
   font-style: normal;
 }
 
-.ibm-plex-mono-thin-italic {
-  font-family: "IBM Plex Mono", monospace;
-  font-weight: 100;
-  font-style: italic;
-}
-
-.ibm-plex-mono-extralight-italic {
-  font-family: "IBM Plex Mono", monospace;
-  font-weight: 200;
-  font-style: italic;
-}
-
-.ibm-plex-mono-light-italic {
-  font-family: "IBM Plex Mono", monospace;
+.libre-baskerville-thin-italic {
+  font-family: "Libre Baskerville", serif;
+  font-optical-sizing: auto;
   font-weight: 300;
   font-style: italic;
 }
 
-.ibm-plex-mono-regular-italic {
-  font-family: "IBM Plex Mono", monospace;
+.libre-baskerville-extralight-italic {
+  font-family: "Libre Baskerville", serif;
+  font-optical-sizing: auto;
+  font-weight: 300;
+  font-style: italic;
+}
+
+.libre-baskerville-light-italic {
+  font-family: "Libre Baskerville", serif;
+  font-optical-sizing: auto;
+  font-weight: 300;
+  font-style: italic;
+}
+
+.libre-baskerville-regular-italic {
+  font-family: "Libre Baskerville", serif;
+  font-optical-sizing: auto;
   font-weight: 400;
   font-style: italic;
 }
 
-.ibm-plex-mono-medium-italic {
-  font-family: "IBM Plex Mono", monospace;
+.libre-baskerville-medium-italic {
+  font-family: "Libre Baskerville", serif;
+  font-optical-sizing: auto;
   font-weight: 500;
   font-style: italic;
 }
 
-.ibm-plex-mono-semibold-italic {
-  font-family: "IBM Plex Mono", monospace;
+.libre-baskerville-semibold-italic {
+  font-family: "Libre Baskerville", serif;
+  font-optical-sizing: auto;
   font-weight: 600;
   font-style: italic;
 }
 
-.ibm-plex-mono-bold-italic {
-  font-family: "IBM Plex Mono", monospace;
+.libre-baskerville-bold-italic {
+  font-family: "Libre Baskerville", serif;
+  font-optical-sizing: auto;
   font-weight: 700;
   font-style: italic;
 }
@@ -94,7 +108,8 @@ body {
   margin: 0;
   padding: 0;
   overflow: hidden;
-  font-family: "IBM Plex Mono", monospace;
+  font-family: "Libre Baskerville", serif;
+  font-style: italic;
 }
 
 /* Full Screen App */
@@ -136,7 +151,7 @@ body {
   padding: 0;
   color: #000000;
   font-weight: 400;
-  font-family: "IBM Plex Mono", monospace;
+  font-family: "Libre Baskerville", serif;
   opacity: 1.0;
 }
 
@@ -203,7 +218,7 @@ body {
   border: 1px solid #FFCCCC;
   font-size: 0.875rem;
   box-shadow: none;
-  font-family: "IBM Plex Mono", monospace;
+  font-family: "Libre Baskerville", serif;
 }
 
 /* Visualization Container */
@@ -231,7 +246,7 @@ body {
 }
 
 .ascii-frame {
-  font-family: "IBM Plex Mono", monospace;
+  font-family: "Libre Baskerville", serif;
   font-size: 12px;
   line-height: 1;
   margin: 0;
@@ -269,11 +284,11 @@ body {
 }
 
 .most-probable-icon {
-  width: 12px;
-  height: 12px;
-  background: #0080FF;
+  width: 10px;
+  height: 10px;
+  background: #00831C;
   flex-shrink: 0;
-  border-radius: 0;
+  border-radius: 50%;
 }
 
 .most-probable-label {
@@ -284,7 +299,7 @@ body {
   font-size: 14px;
   font-weight: 400;
   color: #000000;
-  font-family: "IBM Plex Mono", monospace;
+  font-family: "Libre Baskerville", serif;
   min-height: 1.2em;
   display: inline-block;
 }
@@ -308,7 +323,7 @@ body {
   font-size: 0.85rem;
   text-align: center;
   font-weight: 500;
-  font-family: "IBM Plex Mono", monospace;
+  font-family: "Libre Baskerville", serif;
 }
 
 .graph-svg {
@@ -342,7 +357,7 @@ body {
 }
 
 .node text {
-  font-family: "IBM Plex Mono", monospace;
+  font-family: "Libre Baskerville", serif;
 }
 
 .completion-node {
@@ -427,8 +442,9 @@ body {
   bottom: 2rem;
   left: 2rem;
   z-index: 100;
-  font-family: "IBM Plex Mono", monospace;
-  font-size: 10px;
+  font-family: monospace;
+  font-style: normal;
+  font-size: 8px;
   font-weight: 400;
   color: #000000;
   opacity: 0.4;

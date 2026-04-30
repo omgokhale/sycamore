@@ -202,20 +202,20 @@ function WordTreeGraph({ data, firstCompletion }) {
     }
 
     // Font size calculation (Wattenberg style: size ∝ √frequency)
-    const minFontSize = 11;
-    const maxFontSize = 32;
+    const minFontSize = 14;
+    const maxFontSize = 48;
     const getFontSize = (nodeData) => {
       if (nodeData.token === '<ROOT>') return 12;
       if (nodeData.gen_count === 0) return minFontSize; // Fixed size for alternatives
 
-      const normalized = Math.sqrt(nodeData.gen_count) / Math.sqrt(maxGenCount);
+      const normalized = nodeData.gen_count / maxGenCount;
       return minFontSize + normalized * (maxFontSize - minFontSize);
     };
 
     // Color: black for selected, gray for alternatives, blue for tracked path only
     const getTextColor = (nodeData) => {
       if (nodeData.token === '<ROOT>') return '#000000';
-      if (trackedPathNodeIds.has(nodeData.node_id)) return '#0080FF'; // Blue for tracked path
+      if (trackedPathNodeIds.has(nodeData.node_id)) return '#00831C'; // Blue for tracked path
       if (nodeData.gen_count === 0) return '#999999'; // Gray for never selected
       return '#000000'; // Black for selected
     };
@@ -341,14 +341,23 @@ function WordTreeGraph({ data, firstCompletion }) {
       svgRef.current.zoomToFit = zoomToFit;
     }
 
-    // Calculate text widths for curve avoidance
+    // Calculate text widths using actual DOM measurement so any font works correctly
+    const measurer = g.append('g').attr('visibility', 'hidden');
     nodes.forEach(d => {
       const fontSize = getFontSize(d.data);
-      const token = d.data.token === '<ROOT>' ? 'START' : d.data.token;
-      // Rough estimate: monospace width
-      d.textWidth = token.length * fontSize * 0.6;
+      const token = d.data.token === '<ROOT>' ? 'START'
+        : (d.data.token.length > 30 ? d.data.token.substring(0, 30) + '...' : d.data.token);
+      const isRoot = d.data.token === '<ROOT>';
+      const tmpText = measurer.append('text')
+        .attr('font-family', '"Libre Baskerville", serif')
+        .attr('font-size', fontSize + 'px')
+        .attr('font-weight', '400')
+        .style('font-style', isRoot ? 'italic' : 'normal')
+        .text(token);
+      d.textWidth = tmpText.node().getComputedTextLength();
       d.textHeight = fontSize;
     });
+    measurer.remove();
 
     // Create curved link path generator that avoids text overlap
     const createCurvedPath = (d) => {
@@ -390,7 +399,7 @@ function WordTreeGraph({ data, firstCompletion }) {
       .join('path')
       .attr('d', createCurvedPath)
       .attr('fill', 'none')
-      .attr('stroke', '#000000')
+      .attr('stroke', d => d.source.data.is_tracked_path && d.target.data.is_tracked_path ? '#00831C' : '#000000')
       .attr('stroke-width', 1)
       .attr('stroke-opacity', 0);
 
@@ -399,7 +408,8 @@ function WordTreeGraph({ data, firstCompletion }) {
       const path = d3.select(this);
       const length = path.node().getTotalLength();
 
-      const targetOpacity = isLinkVisible(d) ? 0.3 : 0;
+      const isTrackedEdge = d.source.data.is_tracked_path && d.target.data.is_tracked_path;
+      const targetOpacity = isLinkVisible(d) ? (isTrackedEdge ? 0.7 : 0.3) : 0;
 
       path
         .attr('stroke-dasharray', length + ' ' + length)
@@ -500,9 +510,10 @@ function WordTreeGraph({ data, firstCompletion }) {
       .attr('y', 0)
       .attr('dy', '0.35em')
       .attr('text-anchor', 'start')
-      .attr('font-family', '"IBM Plex Mono", monospace')
+      .attr('font-family', '"Libre Baskerville", serif')
       .attr('font-size', d => getFontSize(d.data) + 'px')
       .attr('font-weight', '400')
+      .style('font-style', 'normal')
       .attr('fill', d => getTextColor(d.data))
       .attr('opacity', 0)
       .style('pointer-events', 'none')
@@ -512,6 +523,21 @@ function WordTreeGraph({ data, firstCompletion }) {
       .delay((d, i) => focusedNode ? 0 : i * 15 + 300)
       .ease(d3.easeCubicOut)
       .attr('opacity', d => getNodeOpacity(d));
+
+    // Add blue circle to the left of the START (root) label
+    node.filter(d => d.data.token === '<ROOT>')
+      .append('circle')
+      .attr('r', 5)
+      .attr('cx', -14)
+      .attr('cy', 0)
+      .attr('fill', '#00831C')
+      .attr('opacity', 0)
+      .style('pointer-events', 'none')
+      .transition()
+      .duration(400)
+      .delay(focusedNode ? 0 : 300)
+      .ease(d3.easeCubicOut)
+      .attr('opacity', 1);
 
     // Add completion text boxes for leaf nodes
     const leafNodes = nodes.filter(d =>
@@ -526,14 +552,24 @@ function WordTreeGraph({ data, firstCompletion }) {
 
       // Add white background box
       const boxPadding = 6;
-      const boxWidth = 200;
+      const maxBoxWidth = 280;
       const lineHeight = 12;
       const fontSize = 9;
 
-      // Calculate height based on actual content
-      // Estimate characters per line (monospace: ~0.6em per char)
-      const charsPerLine = Math.floor((boxWidth - boxPadding * 2) / (fontSize * 0.6));
-      const numLines = Math.ceil(completionText.length / charsPerLine);
+      // Measure actual single-line text width so the box fits the content
+      const tmpMeasure = g.append('text')
+        .attr('font-family', '"Libre Baskerville", serif')
+        .attr('font-size', `${fontSize}px`)
+        .attr('font-weight', '400')
+        .attr('visibility', 'hidden')
+        .text(completionText);
+      const singleLineWidth = tmpMeasure.node().getComputedTextLength();
+      tmpMeasure.remove();
+
+      const maxInnerWidth = maxBoxWidth - boxPadding * 2;
+      const innerWidth = Math.min(singleLineWidth, maxInnerWidth);
+      const boxWidth = innerWidth + boxPadding * 2;
+      const numLines = singleLineWidth <= maxInnerWidth ? 1 : Math.ceil(singleLineWidth / maxInnerWidth);
       const boxHeight = numLines * lineHeight + boxPadding * 2;
 
       const completionBoxBg = nodeGroup.append('rect')
@@ -565,13 +601,13 @@ function WordTreeGraph({ data, firstCompletion }) {
         .attr('class', 'completion-box-text')
         .attr('x', leafNode.textWidth + 20 + boxPadding)
         .attr('y', 0)
-        .attr('width', boxWidth - boxPadding * 2)
+        .attr('width', innerWidth)
         .attr('height', boxHeight - boxPadding * 2)
         .style('pointer-events', 'none')
         .attr('opacity', 0);
 
       foreignObj.append('xhtml:div')
-        .style('font-family', '"IBM Plex Mono", monospace')
+        .style('font-family', '"Libre Baskerville", serif')
         .style('font-size', `${fontSize}px`)
         .style('line-height', `${lineHeight}px`)
         .style('color', '#000000')
@@ -695,7 +731,7 @@ function WordTreeGraph({ data, firstCompletion }) {
 
       <div className="credit-text">
         <div>OM GOKHALE</div>
-        <div>LAST UPDATED 2.26.26</div>
+        <div>LAST UPDATED {__COMMIT_DATE__}</div>
       </div>
 
       {/* Floating tooltip */}
@@ -709,7 +745,7 @@ function WordTreeGraph({ data, firstCompletion }) {
             border: '1px solid #CCCCCC',
             padding: '8px 10px',
             borderRadius: '4px',
-            fontFamily: '"IBM Plex Mono", monospace',
+            fontFamily: '"Libre Baskerville", serif',
             fontSize: '10px',
             pointerEvents: 'none',
             zIndex: 1000
