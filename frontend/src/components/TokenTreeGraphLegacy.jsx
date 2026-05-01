@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
 
-function TokenTreeGraph({ data, firstCompletion }) {
+function TokenTreeGraph({ data }) {
   const svgRef = useRef(null);
   const containerRef = useRef(null);
   const [dimensions, setDimensions] = useState({ width: 1600, height: 1000 });
@@ -391,28 +391,28 @@ function TokenTreeGraph({ data, firstCompletion }) {
       (!d.children || d.children.length === 0) && isSelectedPath(d)
     );
 
-    // Use is_tracked_path field from backend to find the green path
-    // This ensures the green path matches the first completion from the API exactly
-    const mostProbableNodeIds = new Set();
+    // Find the most common path (highest minimum gen_count along path)
     let mostProbableLeaf = null;
+    let highestGenCount = -Infinity;
 
-    // Find all nodes marked as part of the tracked path
-    nodes.forEach(node => {
-      if (node.data.is_tracked_path) {
-        mostProbableNodeIds.add(node.data.node_id);
-        // Find the leaf node on the tracked path
-        if (!node.children || node.children.length === 0) {
-          mostProbableLeaf = node;
-        }
+    leafNodes.forEach(leaf => {
+      const pathGenCount = getPathGenCount(leaf);
+      if (pathGenCount > highestGenCount) {
+        highestGenCount = pathGenCount;
+        mostProbableLeaf = leaf;
       }
     });
 
-    // Always use firstCompletion from API if available (guaranteed grammatical)
-    // This ensures the floating tile shows the actual model completion
-    if (firstCompletion) {
-      setMostProbableCompletion(firstCompletion);
-    } else if (mostProbableLeaf) {
-      // Fallback to tree path if no API completion available
+    // Mark all nodes on the most probable path
+    const mostProbableNodeIds = new Set();
+    if (mostProbableLeaf) {
+      let current = mostProbableLeaf;
+      while (current) {
+        mostProbableNodeIds.add(current.data.node_id);
+        current = current.parent;
+      }
+
+      // Set the most probable completion text
       setMostProbableCompletion(getCompletionPath(mostProbableLeaf));
     }
 
@@ -546,10 +546,7 @@ function TokenTreeGraph({ data, firstCompletion }) {
 
     // Calculate dimensions for completion nodes
     leafNodes.forEach(d => {
-      // For the green path (mostProbableLeaf), use firstCompletion from API
-      // For other paths, reconstruct from tokens
-      const isGreenPath = mostProbableLeaf && d.data.node_id === mostProbableLeaf.data.node_id;
-      const completionText = isGreenPath && firstCompletion ? firstCompletion : getCompletionPath(d);
+      const completionText = getCompletionPath(d);
       const wrappedLines = wrapText(completionText, 4);
       d.wrappedLines = wrappedLines;
 
@@ -704,7 +701,7 @@ function TokenTreeGraph({ data, firstCompletion }) {
       .delay((d, i) => links.length * 15 + 1100 + i * 40)
       .ease(d3.easeCubicOut)
       .attr('opacity', 0.5);
-  }, [data, dimensions, firstCompletion]);
+  }, [data, dimensions]);
 
   const handleZoomToFit = () => {
     if (svgRef.current && svgRef.current.zoomToFit) {
