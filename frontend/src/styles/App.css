@@ -465,19 +465,20 @@ body {
   position: fixed;
   inset: 0;
   z-index: 1100;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .info-modal {
-  position: relative;
+  position: fixed;
+  bottom: calc(2rem + 48px + 12px);
+  left: 2rem;
   background: #FFFFFF;
   border: 1px solid #D8D8D8;
   border-radius: 10px;
   box-shadow: none;
-  max-width: 520px;
-  width: calc(100% - 4rem);
+  max-width: 420px;
+  width: calc(100vw - 4rem);
+  max-height: calc(100vh - 10rem);
+  overflow-y: auto;
   padding: 2rem 2rem 1.5rem;
   font-family: "Libre Baskerville", serif;
   font-style: normal;
