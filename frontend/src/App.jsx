@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import InputForm from './components/InputForm';
 import WordTreeGraph from './components/WordTreeGraph';
-import TokenTreeGraph from './components/TokenTreeGraph';
+import TokenTreeGraphLegacy from './components/TokenTreeGraphLegacy';
 import AsciiAnimation from './components/AsciiAnimation';
 import { generateTree } from './services/api';
 import './styles/App.css';
 
-const GraphComponent = window.location.pathname.startsWith('/legacy')
-  ? TokenTreeGraph
-  : WordTreeGraph;
+const isLegacy = window.location.pathname.startsWith('/legacy');
+if (isLegacy) document.body.classList.add('legacy');
+
+const GraphComponent = isLegacy ? TokenTreeGraphLegacy : WordTreeGraph;
 
 function App() {
   const [treeData, setTreeData] = useState(null);

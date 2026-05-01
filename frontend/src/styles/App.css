@@ -502,3 +502,18 @@ body {
     font-size: 0.9rem;
   }
 }
+
+/* Legacy route (/legacy) — restore IBM Plex Mono for shared HTML UI elements */
+body.legacy {
+  font-family: "IBM Plex Mono", monospace;
+  font-style: normal;
+}
+
+body.legacy .floating-input,
+body.legacy .floating-error,
+body.legacy .most-probable-text,
+body.legacy .graph-info,
+body.legacy .ascii-frame {
+  font-family: "IBM Plex Mono", monospace;
+  font-style: normal;
+}
