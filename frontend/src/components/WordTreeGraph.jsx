@@ -732,7 +732,7 @@ function WordTreeGraph({ data, firstCompletion }) {
       </button>
 
       <button className="info-button" onClick={() => setShowInfo(true)}>
-        <Info size={18} weight="fill" />
+        <Info size={18} />
       </button>
 
       {showInfo && (
@@ -746,6 +746,10 @@ function WordTreeGraph({ data, firstCompletion }) {
             <p>This project is a humble attempt to demystify an LLM's next-token-prediction process by showing both the paths it takes and the many it leaves behind, revealing an abundance of typos and nonsense and falsehoods that are usually pruned before we can see them.</p>
             <p>This project builds on top of Brock Wilcox's (far more impressive) original work on token tree visualization, Martin Wattenberg and Fernanda Viegas' legendary word frequency trees, and draws from a growing body of research on transparency interfaces, including InFerActive (Hwangbo et al., 2025) and generAItor (Spinner et al., 2024).</p>
             <p>Running the same prompt 30 times also helps us spot GPT-4o mini's habits and biases. The model tends to identify golden retrievers as its favorite dog, tends to identify Inception as its favorite movie, and tends to name doctors "Smith" (using he/him pronouns), and nurses "Clara" (using she/her pronouns). (In one instance, after assigning a doctor she/her pronouns, it named her "Smithara.")</p>
+            <div className="info-modal-credit">
+              <div>OM GOKHALE</div>
+              <div>LAST UPDATED {__COMMIT_DATE__}</div>
+            </div>
           </div>
         </div>
       )}

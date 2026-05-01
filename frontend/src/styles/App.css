@@ -464,7 +464,7 @@ body {
 .info-overlay {
   position: fixed;
   inset: 0;
-  z-index: 200;
+  z-index: 1100;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -480,6 +480,7 @@ body {
   width: calc(100% - 4rem);
   padding: 2rem 2rem 1.5rem;
   font-family: "Libre Baskerville", serif;
+  font-style: normal;
   font-size: 13px;
   line-height: 1.65;
   color: #222222;
@@ -487,10 +488,22 @@ body {
 
 .info-modal p {
   margin: 0 0 1em;
+  font-style: normal;
 }
 
 .info-modal p:last-child {
-  margin-bottom: 0;
+  margin-bottom: 1.5em;
+}
+
+.info-modal-credit {
+  font-family: monospace;
+  font-style: normal;
+  font-size: 8px;
+  font-weight: 400;
+  color: #000000;
+  opacity: 0.4;
+  line-height: 1.4;
+  user-select: none;
 }
 
 .info-modal-close {
