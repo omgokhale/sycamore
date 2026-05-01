@@ -1,9 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import InputForm from './components/InputForm';
 import WordTreeGraph from './components/WordTreeGraph';
+import TokenTreeGraph from './components/TokenTreeGraph';
 import AsciiAnimation from './components/AsciiAnimation';
 import { generateTree } from './services/api';
 import './styles/App.css';
+
+const GraphComponent = window.location.pathname.startsWith('/legacy')
+  ? TokenTreeGraph
+  : WordTreeGraph;
 
 function App() {
   const [treeData, setTreeData] = useState(null);
@@ -49,7 +54,7 @@ function App() {
       {/* Full screen visualization */}
       <div className="visualization-container">
         {treeData ? (
-          <WordTreeGraph data={treeData} firstCompletion={firstCompletion} />
+          <GraphComponent data={treeData} firstCompletion={firstCompletion} />
         ) : (
           <div className="empty-state">
             <AsciiAnimation />
