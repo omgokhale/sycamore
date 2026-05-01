@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import InputForm from './components/InputForm';
-import WordTreeGraph from './components/WordTreeGraph';
+import TokenTreeGraphLegacy from './components/TokenTreeGraphLegacy';
 import AsciiAnimation from './components/AsciiAnimation';
 import { generateTree } from './services/api';
-import './styles/App.css';
+import './styles/AppLegacy.css';
 
-function App() {
+function AppLegacy() {
   const [treeData, setTreeData] = useState(null);
   const [firstCompletion, setFirstCompletion] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -16,7 +16,6 @@ function App() {
     setError(null);
 
     try {
-      // Hardcoded values: num_runs=30, top_logprobs=3
       const result = await generateTree({
         prompt,
         num_runs: 30,
@@ -32,24 +31,16 @@ function App() {
     }
   };
 
-  // Auto-generate tree for "Hello, world." on startup
-  useEffect(() => {
-    handleSubmit('Hello, world.');
-  }, []); // Empty dependency array = runs once on mount
-
   return (
     <div className="app-fullscreen">
-      {/* Floating input at top center */}
       <InputForm
         onSubmit={handleSubmit}
         loading={loading}
         error={error}
       />
-
-      {/* Full screen visualization */}
       <div className="visualization-container">
         {treeData ? (
-          <WordTreeGraph data={treeData} firstCompletion={firstCompletion} />
+          <TokenTreeGraphLegacy data={treeData} firstCompletion={firstCompletion} />
         ) : (
           <div className="empty-state">
             <AsciiAnimation />
@@ -60,4 +51,4 @@ function App() {
   );
 }
 
-export default App;
+export default AppLegacy;

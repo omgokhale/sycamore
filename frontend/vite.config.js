@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { execSync } from 'child_process'
+import { resolve } from 'path'
 
 const commitDate = (() => {
   try {
@@ -14,6 +15,14 @@ export default defineConfig({
   plugins: [react()],
   define: {
     __COMMIT_DATE__: JSON.stringify(commitDate),
+  },
+  build: {
+    rollupOptions: {
+      input: {
+        main: resolve(__dirname, 'index.html'),
+        legacy: resolve(__dirname, 'legacy.html'),
+      },
+    },
   },
   server: {
     port: 3000,

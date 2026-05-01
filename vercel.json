@@ -3,6 +3,7 @@
   "outputDirectory": "frontend/dist",
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" },
+    { "source": "/legacy", "destination": "/legacy.html" },
     { "source": "/((?!api).*)", "destination": "/index.html" }
   ]
 }
